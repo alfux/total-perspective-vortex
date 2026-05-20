@@ -3,7 +3,6 @@ import logging
 import sys
 from argparse import Namespace
 
-import matplotlib
 import matplotlib.pyplot as plt
 import mne
 from mne.datasets import eegbci
@@ -11,8 +10,7 @@ from mne.datasets import eegbci
 
 def test_features() -> None:
     """Test MNE features"""
-    matplotlib.use("QtAgg")
-    raw: mne.io.Raw = mne.io.read_raw_edf("./data/S001/S001R01.edf")
+    raw: mne.io.Raw = mne.io.read_raw_edf("./data/S001/S001R02.edf")
     eegbci.standardize(raw)
     raw.set_montage("standard_1005")
     raw.compute_psd().plot(picks="data", exclude="bads", amplitude=False)
