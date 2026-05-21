@@ -5,17 +5,8 @@ from argparse import Namespace
 
 import matplotlib.pyplot as plt
 import mne
-from mne.datasets import eegbci
 
-
-def test_features() -> None:
-    """Test MNE features"""
-    raw: mne.io.Raw = mne.io.read_raw_edf("./data/S001/S001R02.edf")
-    eegbci.standardize(raw)
-    raw.set_montage("standard_1005")
-    raw.compute_psd().plot(picks="data", exclude="bads", amplitude=False)
-    raw.plot(duration=5, n_channels=64)
-    plt.show()
+from tpv.preprocessing import Preprocessing
 
 
 def get_args(description: str = '') -> Namespace:
@@ -27,6 +18,8 @@ def get_args(description: str = '') -> Namespace:
         Namespace: The arguments.
     """
     av = arg.ArgumentParser(description=description)
+    av.add_argument("data", type=str, help="Traceback mode.")
+    av.add_argument("-n", type=int, help="number of files to read")
     av.add_argument("--debug", action="store_true", help="Traceback mode.")
     return av.parse_args()
 
@@ -44,7 +37,7 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        test_features()
+        Preprocessing(av.data)
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug

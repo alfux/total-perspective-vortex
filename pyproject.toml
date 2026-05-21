@@ -1,10 +1,16 @@
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
 [project]
-name = "total-perspective-vortex"
+name = "tpv"
 version = "0.1.0"
-description = "Add your description here"
+description = "42 School project for brain waves analysis"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "mne>=1.12.1",
     "pyqt6>=6.11.0",
 ]
+
+[project.scripts]
