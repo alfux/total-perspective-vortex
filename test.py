@@ -37,7 +37,8 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        Preprocessing(av.data)
+        preprocessing = Preprocessing(av.data)
+        preprocessing.plot()
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug
