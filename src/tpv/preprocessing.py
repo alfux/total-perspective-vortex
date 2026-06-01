@@ -1,7 +1,7 @@
 """Manage data preprocessing point of the pipeline."""
 import os
 from pathlib import Path
-from typing import Callable, Generator, Self
+from typing import Any, Callable, Generator, Self
 
 import matplotlib.pyplot as plt
 import mne
@@ -41,9 +41,9 @@ class Preprocessing:
         for item in sorted(os.listdir(directory)):
             path = directory / item
             if path.is_dir():
-                yield (item, dict(self._create_data_structure(path)))
+                yield ('_' + item, dict(self._create_data_structure(path)))
             elif path.suffix == ".edf":
-                yield (item, self._data_structure(path))
+                yield ('$' + item, path)
 
     def _subplot(self: Self, data: dict, label: str) -> None:
         """Sub windows to choose run inside a directory.
@@ -64,15 +64,23 @@ class Preprocessing:
             else:
                 key = data_keys[i + j * lines]
                 sub = data[key]
-                btn = Button(axes[i, j], Path(key).stem)
-                if "data" in sub and isinstance(sub["data"], RawEDF):
-                    btn.on_clicked(self._get_file_callback(sub["data"]))
+                btn = Button(axes[i, j], Path(key).stem[1:])
+                if key[0] == '$':
+                    btn.on_clicked(self._get_file_callback(sub))
                 else:
                     btn.on_clicked(self._get_dir_callback(sub, key))
                 buttons.add(btn)
         self._buttons.update(buttons)
         fig.canvas.mpl_connect("close_event", self._get_cleaner(buttons))
         fig.show()
+
+    def _get_file_callback(self: Self, data: str) -> Callable:
+        """Create a file button's callback to plot the data.
+
+        Args:
+            data (str): path of the data file.
+        """
+        return lambda _: self._file_options(data)
 
     def _get_dir_callback(self: Self, sub_data: dict, label: str) -> Callable:
         """Create a directory button's callback to navigate inside.
@@ -91,24 +99,53 @@ class Preprocessing:
         """
         return lambda _: self._buttons.difference_update(buttons)
 
-    @staticmethod
-    def _data_structure(path: Path) -> dict:
-        """Create the file node of the data structure.
+    def _file_options(self: Self, path: str) -> None:
+        """Sub window to choose file plot options.
 
         Args:
-            path (Path): path of a data file.
-        Returns:
-            dict: data structure node of a file.
+            path (str): path of the data file.
         """
-        raw = mne.io.read_raw_edf(path)
+        fig, axes = plt.subplots(2)
+        raw = Button(axes[0], "Raw")
+        raw.on_clicked(lambda _: mne.io.read_raw_edf(path).plot())
+        psd = Button(axes[1], "PSD")
+        psd.on_clicked(self._get_psd_callback(path))
+        buttons = {raw, psd}
+        self._buttons.update(buttons)
+        fig.canvas.mpl_connect("close_event", self._get_cleaner(buttons))
+        fig.show()
+
+    def _get_psd_callback(self: Self, path: str) -> Callable:
+        """PSD filter and plot.
+
+        Args:
+            path (str): path of the data file.
+        """
+
+        def callback(_: Any) -> None:
+            """PSD callback function."""
+            data = mne.io.read_raw_edf(path)
+            eegbci.standardize(data)
+            data.set_montage("standard_1005")
+            data.pick("eeg")
+            data.load_data()
+            data.set_eeg_reference("average")
+            data.compute_psd().plot()
+
+        return callback
+
+    @staticmethod
+    def _get_events(raw: RawEDF, mapping: dict) -> dict:
+        """Extract an EDF events.
+
+        Args:
+            data (RawEDF): the data object.
+            mapping (dict): event mapping depending on the path.
+        """
         events, eid = mne.events_from_annotations(raw)
-        mapping = Preprocessing._mapping(path)
         eid = {v: mapping[str(k)] for k, v in eid.items()}
         sfreq = raw.info["sfreq"]
-        return {
-            "data": raw,
-            "events": {e[0] / sfreq: eid[e[2]] for e in events}
-        }
+        return {e[0] / sfreq: eid[e[2]] for e in events}
 
     @staticmethod
     def _mapping(path: Path) -> dict:
@@ -129,15 +166,6 @@ class Preprocessing:
                 return {"T0": "R", "T1": "EU", "T2": "ED"}
             case 3:
                 return {"T0": "R", "T1": "IU", "T2": "ID"}
-
-    @staticmethod
-    def _get_file_callback(data: RawEDF) -> Callable:
-        """Create a file button's callback to plot the data.
-
-        Args:
-            data (RawEDF): object managing the file's data.
-        """
-        return lambda _: data.plot()
 
     # def filter(self: Self, key: str) -> RawEDF:
     #     """Filter a dataset.
