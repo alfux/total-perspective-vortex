@@ -10,6 +10,8 @@ from matplotlib.widgets import Button
 from mne.datasets import eegbci
 from mne.io.edf.edf import RawEDF
 
+import json
+
 
 class Preprocessing:
     """Data preprocessing object."""
@@ -23,6 +25,9 @@ class Preprocessing:
         mne.set_log_level("ERROR")
         self._path = Path(directory)
         self._data = dict(self._create_data_structure(self._path))
+        with open("output.json", "w") as file:
+            file.write(json.dumps(self._data, indent=2, default=str))
+        quit()
         self._buttons = set()
 
     def plot(self: Self) -> None:
@@ -38,12 +43,45 @@ class Preprocessing:
         Returns:
             dict: Data structure.
         """
+        files = list(self._find_files(directory))
+        classified = {
+            "IE": [],
+            "II": [],
+            "UE": [],
+            "UI": [],
+            "BE": [],
+            "BI": []
+        }
+        for file in files:
+            match int(file.stem[-2:]):
+                case 1:
+                    classified["IE"].append(file)
+                case 2:
+                    classified["II"].append(file)
+                case 3 | 7 | 11:
+                    classified["UE"].append(file)
+                case 4 | 8 | 12:
+                    classified["UI"].append(file)
+                case 5 | 9 | 13:
+                    classified["BE"].append(file)
+                case 6 | 10 | 14:
+                    classified["BI"].append(file)
+        return classified
+
+    def _find_files(self: Self, directory: Path) -> Generator:
+        """Create a list of edf files present in the directory.
+
+        Args:
+            directory (Path): Directory containing brain waves data.
+        Yields:
+            Path: path of the edf file.
+        """
         for item in sorted(os.listdir(directory)):
             path = directory / item
             if path.is_dir():
-                yield ('_' + item, dict(self._create_data_structure(path)))
+                yield from self._find_files(path)
             elif path.suffix == ".edf":
-                yield ('$' + item, path)
+                yield path
 
     def _subplot(self: Self, data: dict, label: str) -> None:
         """Sub windows to choose run inside a directory.
@@ -74,13 +112,13 @@ class Preprocessing:
         fig.canvas.mpl_connect("close_event", self._get_cleaner(buttons))
         fig.show()
 
-    def _get_file_callback(self: Self, data: str) -> Callable:
+    def _get_file_callback(self: Self, path: Path) -> Callable:
         """Create a file button's callback to plot the data.
 
         Args:
-            data (str): path of the data file.
+            path (Path): path of the data file.
         """
-        return lambda _: self._file_options(data)
+        return lambda _: self._file_options(path)
 
     def _get_dir_callback(self: Self, sub_data: dict, label: str) -> Callable:
         """Create a directory button's callback to navigate inside.
@@ -99,16 +137,16 @@ class Preprocessing:
         """
         return lambda _: self._buttons.difference_update(buttons)
 
-    def _file_options(self: Self, path: str) -> None:
+    def _file_options(self: Self, path: Path) -> None:
         """Sub window to choose file plot options.
 
         Args:
-            path (str): path of the data file.
+            path (Path): path of the data file.
         """
         fig, axes = plt.subplots(2)
-        raw = Button(axes[0], "Raw")
+        raw = Button(axes[0], "Raw " + str(path))
         raw.on_clicked(lambda _: mne.io.read_raw_edf(path).plot())
-        psd = Button(axes[1], "PSD")
+        psd = Button(axes[1], "PSD " + str(path))
         psd.on_clicked(self._get_psd_callback(path))
         buttons = {raw, psd}
         self._buttons.update(buttons)
@@ -130,7 +168,9 @@ class Preprocessing:
             data.pick("eeg")
             data.load_data()
             data.set_eeg_reference("average")
-            data.compute_psd().plot()
+            fig = data.compute_psd().plot(show=False)
+            fig.canvas.manager.set_window_title("bite")
+            fig.show()
 
         return callback
 
@@ -148,7 +188,7 @@ class Preprocessing:
         return {e[0] / sfreq: eid[e[2]] for e in events}
 
     @staticmethod
-    def _mapping(path: Path) -> dict:
+    def _event_mapping(path: Path) -> dict:
         """Create an event mapping for each run.
 
         Returns:
@@ -166,19 +206,3 @@ class Preprocessing:
                 return {"T0": "R", "T1": "EU", "T2": "ED"}
             case 3:
                 return {"T0": "R", "T1": "IU", "T2": "ID"}
-
-    # def filter(self: Self, key: str) -> RawEDF:
-    #     """Filter a dataset.
-
-    #     Args:
-    #         key (str): The key path to access the data.
-    #     """
-    #     eegbci.standardize(self._raw)
-    #     self._raw.set_montage("standard_1005")
-    #     self._raw.pick("eeg")
-    #     raw.load_data()
-    #     self._raw.set_eeg_reference("average")
-    #     self._psd = self._raw.compute_psd()
-    #     self._raw.filter(7, 30)
-    #     self._psd = self._raw.compute_psd()
-    #     self._psd.plot()
