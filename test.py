@@ -3,9 +3,6 @@ import logging
 import sys
 from argparse import Namespace
 
-import matplotlib.pyplot as plt
-import mne
-
 from tpv.preprocessing import Preprocessing
 
 
@@ -38,7 +35,7 @@ def main() -> int:
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
         preprocessing = Preprocessing(av.data)
-        preprocessing.plot()
+        preprocessing.menu()
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug

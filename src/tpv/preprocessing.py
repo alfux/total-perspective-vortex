@@ -6,6 +6,7 @@ from typing import Any, Callable, Generator, Self
 import matplotlib.pyplot as plt
 import mne
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.widgets import Button
 from mne.datasets import eegbci
 from mne.io.edf.edf import RawEDF
@@ -16,6 +17,15 @@ import json
 class Preprocessing:
     """Data preprocessing object."""
 
+    EVENT_MAP = {
+        "IE": {"T0": 'R', "T1": 'R', "T2": 'R'},
+        "II": {"T0": 'R', "T1": 'R', "T2": 'R'},
+        "UE": {"T0": "R", "T1": "L", "T2": "R"},
+        "UI": {"T0": "R", "T1": "L", "T2": "R"},
+        "BE": {"T0": "R", "T1": "U", "T2": "D"},
+        "BI": {"T0": "R", "T1": "U", "T2": "D"}
+    }
+
     def __init__(self: Self, directory: str) -> None:
         """Initialize the object.
 
@@ -25,15 +35,145 @@ class Preprocessing:
         mne.set_log_level("ERROR")
         self._path = Path(directory)
         self._data = dict(self._create_data_structure(self._path))
-        with open("output.json", "w") as file:
-            file.write(json.dumps(self._data, indent=2, default=str))
-        quit()
+        self._fig = plt.figure(figsize=(16, 9))
         self._buttons = set()
 
-    def plot(self: Self) -> None:
-        """Plot the dataset."""
-        self._subplot(self._data, self._path)
+    def menu(self: Self) -> None:
+        """Open the menu"""
+        self._menu()
         plt.show()
+
+    def _menu(self: Self) -> None:
+        """Creation of the menu."""
+        self._clear()
+        axes = self._fig.subplots(2, 3)
+        ie = Button(axes[0, 0], "Idle Eyes Opened")
+        ie.on_clicked(lambda _: self._file_menu("IE"))
+        ii = Button(axes[1, 0], "Idle Eyes Closed")
+        ii.on_clicked(lambda _: self._file_menu("II"))
+        ue = Button(axes[0, 1], "Unilateral Executed")
+        ue.on_clicked(lambda _: self._file_menu("UE"))
+        ui = Button(axes[1, 1], "Unilateral Imagined")
+        ui.on_clicked(lambda _: self._file_menu("UI"))
+        be = Button(axes[0, 2], "Bilateral Exectued")
+        be.on_clicked(lambda _: self._file_menu("BE"))
+        bi = Button(axes[1, 2], "Bilateral Imagined")
+        bi.on_clicked(lambda _: self._file_menu("BI"))
+        self._buttons.update({ie, ii, ue, ui, be, bi})
+        self._fig.canvas.draw()
+
+    def _clear(self: Self) -> None:
+        """Clear the figure and buttons."""
+        self._fig.clear()
+        self._buttons.clear()
+
+    def _file_menu(self: Self, category: str) -> None:
+        """Open category menu.
+
+        Args:
+            categroy (str): chosen category.
+        """
+        self._clear()
+        col = int(np.ceil(np.sqrt(len(self._data[category]))))
+        lin = int(np.ceil(len(self._data[category]) / col))
+        if col * lin < len(self._data[category]) + 2:
+            lin += 1
+        axes = self._fig.subplots(lin, col)
+        for i in range(lin):
+            for j in range(col):
+                self._file_button(axes[i, j], category, i * col + j)
+        self._fig.canvas.draw()
+
+    def _file_button(self: Self, ax: Axes, category: str, i: int) -> None:
+        """Create the raw file button.
+
+        Args:
+            ax (Axes): Axes of the subplot holding the button.
+            category (list): category of the files.
+            i (int): index of the current file int its catetgory.
+        """
+        files = self._data[category]
+        if i < len(files):
+            button = Button(ax, files[i].stem)
+            button.on_clicked(lambda _: mne.io.read_raw_edf(files[i]).plot())
+            self._buttons.add(button)
+        elif i == len(files):
+            button = Button(ax, "Filter")
+            button.on_clicked(lambda _: self._channels_menu(category))
+            self._buttons.add(button)
+        elif i == len(files) + 1:
+            button = Button(ax, "Back")
+            button.on_clicked(lambda _: self._menu())
+            self._buttons.add(button)
+        else:
+            ax.set_axis_off()
+
+    def _channels_menu(self: Self, category: str) -> None:
+        """Open channels menu.
+
+        Args:
+            category (str): the current category.
+        """
+        self._clear()
+        axes = self._fig.subplots(9, 8)
+        for i in range(8):
+            for j in range(8):
+                channel = i * 8 + j
+                button = Button(axes[i, j], "CH" + str(channel))
+                button.on_clicked(self._channel_callback(category, channel))
+                self._buttons.add(button)
+        button = Button(axes[8, 0], "Back")
+        button.on_clicked(lambda _: self._file_menu(category))
+        self._buttons.add(button)
+        for j in range(1, 8):
+            axes[8, j].set_axis_off()
+        self._fig.canvas.draw()
+
+    def _channel_callback(self: Self, category: str, channel: int) -> Callable:
+        """Create the channel callback function.
+
+        Args:
+            category (str): current file category.
+            channel (int): current channel.
+        Returns:
+            Callable: the button's callback.
+        """
+
+        def callback(*_: Any) -> None:
+            """Group channel by event, Fourier transform and plot."""
+            data = [mne.io.read_raw_edf(f) for f in self._data[category]]
+            if category[-1] == 'E':
+                data += [mne.io.read_raw_edf(f) for f in self._data["IE"]]
+            else:
+                data += [mne.io.read_raw_edf(f) for f in self._data["II"]]
+            groups = {"T0": [], "T1": [], "T2": []}
+            for d in data:
+                d.pick(channel)
+                events, eid = mne.events_from_annotations(d)
+                epochs = mne.Epochs(d, events, eid, 0, 4.1, None, preload=True)
+                spectrum = epochs["T0"].compute_psd()
+                groups["T0"].add(spectrum.get_data(return_freqs=True))
+                if "T1" in epochs:
+                    spectrum = epochs["T1"].compute_psd()
+                    groups["T1"].add(spectrum.get_data(return_freqs=True))
+                if "T2" in epochs:
+                    spectrum = epochs["T2"].compute_psd()
+                    groups["T2"].add(spectrum.get_data(return_freqs=True))
+            self._plot_groups(groups, category, channel)
+
+        return callback
+
+    def _plot_groups(
+        self: Self, groups: dict, category: str, channel: int
+    ) -> None:
+        """Plot grouped transformed data.
+
+        Args:
+            groups (dict): groups of same event.
+            category (str): current event category.
+            channel (int): current displayed channel.
+        """
+        pass
 
     def _create_data_structure(self: Self, directory: Path) -> Generator:
         """Create a data structure for easy navigation.
@@ -44,29 +184,22 @@ class Preprocessing:
             dict: Data structure.
         """
         files = list(self._find_files(directory))
-        classified = {
-            "IE": [],
-            "II": [],
-            "UE": [],
-            "UI": [],
-            "BE": [],
-            "BI": []
-        }
+        data = {"IE": [], "II": [], "UE": [], "UI": [], "BE": [], "BI": []}
         for file in files:
             match int(file.stem[-2:]):
                 case 1:
-                    classified["IE"].append(file)
+                    data["IE"].append(file)
                 case 2:
-                    classified["II"].append(file)
+                    data["II"].append(file)
                 case 3 | 7 | 11:
-                    classified["UE"].append(file)
+                    data["UE"].append(file)
                 case 4 | 8 | 12:
-                    classified["UI"].append(file)
+                    data["UI"].append(file)
                 case 5 | 9 | 13:
-                    classified["BE"].append(file)
+                    data["BE"].append(file)
                 case 6 | 10 | 14:
-                    classified["BI"].append(file)
-        return classified
+                    data["BI"].append(file)
+        return data
 
     def _find_files(self: Self, directory: Path) -> Generator:
         """Create a list of edf files present in the directory.
@@ -82,76 +215,6 @@ class Preprocessing:
                 yield from self._find_files(path)
             elif path.suffix == ".edf":
                 yield path
-
-    def _subplot(self: Self, data: dict, label: str) -> None:
-        """Sub windows to choose run inside a directory.
-
-        Args:
-            data (dict): directory's datas.
-        """
-        lines = int(np.sqrt(len(data)))
-        col = (len(data) // lines) + int(len(data) % lines != 0)
-        data_keys = list(data.keys())
-        fig, axes = plt.subplots(lines, col, label=label)
-        buttons = set()
-        for index in range(lines * col):
-            i = index % lines
-            j = index // lines
-            if i + j * lines >= len(data_keys):
-                axes[i, j].axis("off")
-            else:
-                key = data_keys[i + j * lines]
-                sub = data[key]
-                btn = Button(axes[i, j], Path(key).stem[1:])
-                if key[0] == '$':
-                    btn.on_clicked(self._get_file_callback(sub))
-                else:
-                    btn.on_clicked(self._get_dir_callback(sub, key))
-                buttons.add(btn)
-        self._buttons.update(buttons)
-        fig.canvas.mpl_connect("close_event", self._get_cleaner(buttons))
-        fig.show()
-
-    def _get_file_callback(self: Self, path: Path) -> Callable:
-        """Create a file button's callback to plot the data.
-
-        Args:
-            path (Path): path of the data file.
-        """
-        return lambda _: self._file_options(path)
-
-    def _get_dir_callback(self: Self, sub_data: dict, label: str) -> Callable:
-        """Create a directory button's callback to navigate inside.
-
-        Args:
-            sub_data (dict): data associated to the button's directory.
-            label (str): name of the new window.
-        """
-        return lambda _: self._subplot(sub_data, label)
-
-    def _get_cleaner(self: Self, buttons: set) -> Callable:
-        """Create a buttons' cleaner for a closed window.
-
-        Args:
-            buttons (set): buttons to remove from memory.
-        """
-        return lambda _: self._buttons.difference_update(buttons)
-
-    def _file_options(self: Self, path: Path) -> None:
-        """Sub window to choose file plot options.
-
-        Args:
-            path (Path): path of the data file.
-        """
-        fig, axes = plt.subplots(2)
-        raw = Button(axes[0], "Raw " + str(path))
-        raw.on_clicked(lambda _: mne.io.read_raw_edf(path).plot())
-        psd = Button(axes[1], "PSD " + str(path))
-        psd.on_clicked(self._get_psd_callback(path))
-        buttons = {raw, psd}
-        self._buttons.update(buttons)
-        fig.canvas.mpl_connect("close_event", self._get_cleaner(buttons))
-        fig.show()
 
     def _get_psd_callback(self: Self, path: str) -> Callable:
         """PSD filter and plot.
