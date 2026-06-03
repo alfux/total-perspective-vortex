@@ -10,6 +10,8 @@ from matplotlib.axes import Axes
 from matplotlib.widgets import Button
 from mne.datasets import eegbci
 
+# https://www.researchgate.net/publication/286691705_Selection_of_proper_frequency_band_and_compatible_features_for_left_and_right_hand_movement_from_EEG_signal_analysis
+
 
 class Preprocessing:
     """Data preprocessing object."""
