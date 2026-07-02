@@ -6,6 +6,8 @@ build-backend = "uv_build"
 name = "tpv"
 version = "0.1.0"
 description = "42 School project for brain waves analysis"
+authors = [{name = "Alexis Fuchs", email = "alexis.t.fuchs@gmail.com"}]
+license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

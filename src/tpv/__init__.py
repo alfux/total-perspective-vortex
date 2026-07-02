@@ -1,3 +1,3 @@
-from tpv.preprocessing import Preprocessing
+from .preprocessing import Preprocessing
 
 __all__ = ["Preprocessing"]

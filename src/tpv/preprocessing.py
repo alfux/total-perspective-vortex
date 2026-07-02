@@ -3,10 +3,12 @@ import os
 from pathlib import Path
 from typing import Callable, Generator, Self
 
+import matplotlib
 import matplotlib.pyplot as plt
 import mne
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib.widgets import Button
 from mne.datasets import eegbci
 
@@ -31,10 +33,12 @@ class Preprocessing:
         Args:
             directory (str): directory holding all files.
         """
+        matplotlib.use("QtAgg")
         mne.set_log_level("ERROR")
         self._path = Path(directory)
         self._data = dict(self._create_data_structure(self._path))
         self._fig = plt.figure(figsize=(16, 9))
+        self._subfigs = set()
         self._buttons = set()
 
     def menu(self: Self) -> None:
