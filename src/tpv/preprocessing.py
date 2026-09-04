@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import mne
 import numpy as np
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.widgets import Button
 from mne.datasets import eegbci
 
