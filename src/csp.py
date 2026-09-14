@@ -1,3 +1,5 @@
+"""Common Spatial Module for brainwave deep learning."""
+
 import argparse as arg
 import logging
 import sys
@@ -7,10 +9,27 @@ from pathlib import Path
 import mne
 import matplotlib.pyplot as plt
 from mne.datasets import eegbci
+from numpy import ndarray
 
 
-def csp(file: Path) -> None:
-    """Perform Common Spatial Pattern algorithm."""
+def csp(a: ndarray, b: ndarray) -> ndarray:
+    """Perform Common Spatial Pattern on matrix a and matrix b.
+
+    Args:
+        a (ndarray): matrix A.
+        b (ndarray): matrix B.
+    Returns:
+        ndarray: basis vectors.
+    """
+    pass
+
+
+def to_csp(file: Path) -> None:
+    """Perform Common Spatial Pattern algorithm on the dataset.
+
+    Args:
+        file (Path): data file.
+    """
     raw = mne.io.read_raw_edf(file)
     eegbci.standardize(raw)
     raw.set_montage("standard_1005")
