@@ -3,7 +3,9 @@ import logging
 import sys
 from argparse import Namespace
 
-from tpv.preprocessing import Preprocessing
+import numpy as np
+
+from tpv.trigonalized import Trigonalized
 
 
 def get_args(description: str = '') -> Namespace:
@@ -15,8 +17,6 @@ def get_args(description: str = '') -> Namespace:
         Namespace: The arguments.
     """
     av = arg.ArgumentParser(description=description)
-    av.add_argument("data", type=str, help="Traceback mode.")
-    av.add_argument("-n", type=int, help="number of files to read")
     av.add_argument("--debug", action="store_true", help="Traceback mode.")
     return av.parse_args()
 
@@ -34,8 +34,16 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        preprocessing = Preprocessing(av.data)
-        preprocessing.menu()
+        sym = np.random.standard_normal((5, 5))
+        sym = (sym + sym.T) / 2
+        trig = Trigonalized(sym)
+        print(sym)
+        print()
+        print(np.round(trig.basis @ trig.basis.T))
+        print()
+        print(np.round(trig.trigonal, 3))
+        print()
+        print(trig.basis @ trig.trigonal @ trig.basis.T)
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug

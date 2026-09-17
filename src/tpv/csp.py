@@ -10,6 +10,20 @@ import mne
 import matplotlib.pyplot as plt
 from mne.datasets import eegbci
 from numpy import ndarray
+from numpy import random as rng
+
+
+def sym_to_diag(m: ndarray) -> tuple[ndarray, ndarray]:
+    """Diagonalise a symetric real valued matrix.
+
+    Args:
+        m (ndarray): The matrix.
+    Returns:
+        tuple[ndarray, ndarray]: (orthogonal basis matrix, diagonal matrix)
+    """
+    n = len(n)
+    q = rng.standard_normal((n, 1))
+    basis = []
 
 
 def csp(a: ndarray, b: ndarray) -> ndarray:
