@@ -5,7 +5,7 @@ from argparse import Namespace
 
 import numpy as np
 
-from tpv.trigonalized import Trigonalized
+from tpv.diagonalized import Diagonalized
 
 
 def get_args(description: str = '') -> Namespace:
@@ -34,16 +34,17 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        sym = np.random.standard_normal((5, 5))
+        sym = np.array([
+            [1, 2, 3, 1, 1],
+            [2, 7, 0, 0, 1],
+            [3, 0, 3, 9, 1],
+            [3, 0, 9, 9, 1],
+            [1, 1, 1, 1, 1]
+        ])
         sym = (sym + sym.T) / 2
-        trig = Trigonalized(sym)
-        print(sym)
-        print()
-        print(np.round(trig.basis @ trig.basis.T))
-        print()
-        print(np.round(trig.trigonal, 3))
-        print()
-        print(trig.basis @ trig.trigonal @ trig.basis.T)
+        tri = Diagonalized(sym)
+        q, r = tri._qr_householder(sym)
+        print(sym, np.round(q), np.round(r), np.round(q @ r), sep="\n\n")
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug
