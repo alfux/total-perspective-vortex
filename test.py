@@ -43,7 +43,7 @@ def main() -> int:
         ])
         sym = (sym + sym.T) / 2
         tri = Diagonalized(sym)
-        q, r = tri._qr_householder(sym)
+        q, r = tri.qr_algorithm(sym)
         print(sym, np.round(q), np.round(r), np.round(q @ r), sep="\n\n")
         return 0
     except Exception as err:

@@ -36,6 +36,19 @@ class Diagonalized:
         """
         return self._ot_basis, self._tridiagonalised
 
+    def qr_algorithm(self: Self, a: ndarray) -> tuple[ndarray, ndarray]:
+        """QR algorithm for matrix diagonalisation.
+
+        Args:
+            a (ndarray): a matrix.
+        Retrurns:
+            tuple[ndarray, ndarray]: Q, R
+        """
+        for _ in range(10):
+            q, r = self._qr_householder(a)
+            a = r @ q
+        return q, r
+
     def _lanczos(self: Self) -> ndarray:
         """Perform Lanczos algorithm.
 
