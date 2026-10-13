@@ -44,10 +44,44 @@ class Diagonalized:
         Retrurns:
             tuple[ndarray, ndarray]: Q, R
         """
-        for _ in range(10):
+        if a.shape[0] == 1:
+            return np.identity(1), a
+        q_final = np.eye(a.shape[0])
+        stop = False
+        while not stop:
             q, r = self._qr_householder(a)
             a = r @ q
-        return q, r
+            q_final = q_final @ q
+            for i in range(a.shape[0] - 1):
+                scale = np.abs(a[i, i]) + np.abs(a[i + 1, i + 1])
+                if np.abs(a[i + 1, i]) < self._EPSILON * scale:
+                    stop = True
+                    b = a[0: i + 1, 0: i + 1]
+                    c = a[i + 1:, i + 1:]
+                    q = np.zeros_like(q_final)
+                    r = np.zeros_like(q_final)
+                    qb, rb = self.qr_algorithm(b)
+                    q[0: i + 1, 0: i + 1] = qb
+                    r[0: i + 1, 0: i + 1] = rb
+                    qc, rc = self.qr_algorithm(c)
+                    q[i + 1:, i + 1:] = qc
+                    r[i + 1:, i + 1:] = rc
+                    a = r
+                    q_final = q_final @ q
+                    break
+        return q_final, a
+
+    def _diagless_norm(self: Self, a: ndarray) -> float:
+        """Compute Frobenius norm of a matrix without it's diagonal.
+
+        Args:
+            a (ndarray): The matrix.
+        Returns:
+            float: The norm.
+        """
+        return np.sqrt(
+            np.linalg.norm(a) ** 2 - np.linalg.norm(a.diagonal()) ** 2
+        )
 
     def _lanczos(self: Self) -> ndarray:
         """Perform Lanczos algorithm.
