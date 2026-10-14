@@ -1,5 +1,6 @@
-"""Diagonalized object file"""
+"""Diagonalized object file. Further optimizations can be implemented later."""
 
+import sys
 from typing import Self
 
 import numpy as np
@@ -11,6 +12,7 @@ class Diagonalized:
     """Diagonalized class for symetric matrices."""
 
     _EPSILON = 1e-12
+    _MAX_ITERATIONS = int(1e6)
 
     def __init__(self: Self, matrix: ndarray) -> None:
         """Diagonalize a symetric matrix.
@@ -24,51 +26,84 @@ class Diagonalized:
             raise RuntimeError("Not symetric")
         self._m = matrix.copy()
         self._dim = len(self._m)
-        self._ot_basis = self._lanczos()
-        self._tridiagonalised = self._ot_basis.T @ self._m @ self._ot_basis
+        self._tri_basis = self._lanczos()
+        self._tri = self._tri_basis.T @ self._m @ self._tri_basis
+        self._dia_basis, self._dia = self._qr_algorithm(self._tri)
+        self._dia_basis = self._tri_basis @ self._dia_basis
 
     @property
-    def tridiagonal(self: Self) -> tuple[ndarray, ndarray]:
-        """Get the tridiagonalisation matrix and tridiagonal matrix.
+    def raw(self: Self) -> ndarray:
+        """Original matrix getter.
 
         Returns:
-            ndarray: orthogonal matrix, tridiagonal matrix.
+            ndarray: Original matrix.
         """
-        return self._ot_basis, self._tridiagonalised
+        return self._m
 
-    def qr_algorithm(self: Self, a: ndarray) -> tuple[ndarray, ndarray]:
+    @property
+    def dia(self: Self) -> ndarray:
+        """Diagonalized matrix getter.
+
+        Returns:
+            ndarray: Diagonalized matrix.
+        """
+        return self._dia
+
+    @property
+    def dia_basis(self: Self) -> ndarray:
+        """Diagonilization orthogonal basis matrix getter.
+
+        Returns:
+            ndarray: Diagonilization orthogonal basis.
+        """
+        return self._dia_basis
+
+    @property
+    def tri(self: Self) -> tuple[ndarray, ndarray]:
+        """Get the tridiagonalized.
+
+        Returns:
+            ndarray: Tridiagonalized matrix.
+        """
+        return self._tri
+
+    @property
+    def tri_basis(self: Self) -> ndarray:
+        """Tridiagonilization orthogonal basis matrix getter.
+
+        Returns:
+            ndarray: Tridiagonilization orthogonal basis.
+        """
+        return self._tri_basis
+
+    def _qr_algorithm(self: Self, a: ndarray) -> tuple[ndarray, ndarray]:
         """QR algorithm for matrix diagonalisation.
 
         Args:
             a (ndarray): a matrix.
         Retrurns:
-            tuple[ndarray, ndarray]: Q, R
+            tuple[ndarray, ndarray]: Q, D
         """
         if a.shape[0] == 1:
             return np.identity(1), a
         q_final = np.eye(a.shape[0])
-        stop = False
-        while not stop:
+        for _ in range(self._MAX_ITERATIONS):
             q, r = self._qr_householder(a)
             a = r @ q
             q_final = q_final @ q
             for i in range(a.shape[0] - 1):
                 scale = np.abs(a[i, i]) + np.abs(a[i + 1, i + 1])
-                if np.abs(a[i + 1, i]) < self._EPSILON * scale:
-                    stop = True
-                    b = a[0: i + 1, 0: i + 1]
-                    c = a[i + 1:, i + 1:]
-                    q = np.zeros_like(q_final)
-                    r = np.zeros_like(q_final)
-                    qb, rb = self.qr_algorithm(b)
+                if np.abs(a[i + 1, i]) <= self._EPSILON * scale:
+                    b, c = a[0: i + 1, 0: i + 1], a[i + 1:, i + 1:]
+                    q, r = np.zeros_like(q_final), np.zeros_like(q_final)
+                    qb, rb = self._qr_algorithm(b)
                     q[0: i + 1, 0: i + 1] = qb
                     r[0: i + 1, 0: i + 1] = rb
-                    qc, rc = self.qr_algorithm(c)
+                    qc, rc = self._qr_algorithm(c)
                     q[i + 1:, i + 1:] = qc
                     r[i + 1:, i + 1:] = rc
-                    a = r
-                    q_final = q_final @ q
-                    break
+                    return q_final @ q, r
+        print(f"Warning: {self._MAX_ITERATIONS} reached.", file=sys.stderr)
         return q_final, a
 
     def _diagless_norm(self: Self, a: ndarray) -> float:
@@ -190,8 +225,11 @@ class Diagonalized:
             n_sub = len(r_sub)
             x = r_sub[:, 0, None]
             norm = np.linalg.norm(x)
+            if norm == 0:
+                continue
             y = np.zeros(n_sub)
-            y[0] = -np.sign(x[0, 0]) * norm
+            sign = 1 if x[0, 0] >= 0 else -1
+            y[0] = -sign * norm
             v = x - y[:, None]
             h = np.eye(n, n)
             h[i:, i:] = np.eye(n_sub, n_sub) - 2 * (v @ v.T) / (v.T @ v)
