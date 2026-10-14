@@ -1,4 +1,4 @@
-"""Common Spatial Module for brainwave deep learning."""
+"""Common Spatial Pattern Module for brainwave deep learning."""
 
 import argparse as arg
 import logging
@@ -8,9 +8,12 @@ from pathlib import Path
 
 import mne
 import matplotlib.pyplot as plt
+import numpy as np
 from mne.datasets import eegbci
 from numpy import ndarray
 from numpy import random as rng
+
+from tpv.diagonalized import Diagonalized
 
 
 def sym_to_diag(m: ndarray) -> tuple[ndarray, ndarray]:
