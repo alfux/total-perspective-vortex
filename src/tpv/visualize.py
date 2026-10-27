@@ -1,4 +1,4 @@
-"""Manage data preprocessing point of the pipeline."""
+"""Visualize data preprocessing point of the pipeline."""
 import os
 from pathlib import Path
 from typing import Callable, Generator, Self
@@ -14,7 +14,7 @@ from mne.datasets import eegbci
 # https://www.researchgate.net/publication/286691705_Selection_of_proper_frequency_band_and_compatible_features_for_left_and_right_hand_movement_from_EEG_signal_analysis
 
 
-class Preprocessing:
+class Visualize:
     """Data preprocessing object."""
 
     EVENT_MAP = {

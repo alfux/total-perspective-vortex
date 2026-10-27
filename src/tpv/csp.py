@@ -1,100 +1,63 @@
-"""Common Spatial Pattern Module for brainwave deep learning."""
+"""Common Spatial Pattern module for brainwave deep learning."""
 
-import argparse as arg
-import logging
-import sys
-from argparse import Namespace
-from pathlib import Path
+from typing import Self
 
-import mne
-import matplotlib.pyplot as plt
-import numpy as np
-from mne.datasets import eegbci
 from numpy import ndarray
-from numpy import random as rng
 
-from tpv.diagonalized import Diagonalized
-
-
-def sym_to_diag(m: ndarray) -> tuple[ndarray, ndarray]:
-    """Diagonalise a symetric real valued matrix.
-
-    Args:
-        m (ndarray): The matrix.
-    Returns:
-        tuple[ndarray, ndarray]: (orthogonal basis matrix, diagonal matrix)
-    """
-    n = len(n)
-    q = rng.standard_normal((n, 1))
-    basis = []
+from tpv.diagonalize import Diagonalize
 
 
-def csp(a: ndarray, b: ndarray) -> ndarray:
-    """Perform Common Spatial Pattern on matrix a and matrix b.
+class CSP:
+    """Common Spatial Pattern class for EEG signals."""
 
-    Args:
-        a (ndarray): matrix A.
-        b (ndarray): matrix B.
-    Returns:
-        ndarray: basis vectors.
-    """
-    pass
+    def __init__(self: Self, a: ndarray, b: ndarray) -> None:
+        """Initialize the object with two signals."""
+        self._a, self._b = a, b
+        a = a - a.mean(axis=-1, keepdims=True)
+        a = a @ a.transpose(0, 2, 1) / (a.shape[-1] - 1)
+        b = b - b.mean(axis=-1, keepdims=True)
+        b = b @ b.transpose(0, 2, 1) / (b.shape[-1] - 1)
+        c = Diagonalize(a + b)
+        w = (c ** -0.5) @ c.dia_basis.T
+        diag = Diagonalize(w @ a @ w.T)
+        eigenvalues = diag.dia.diagonal()
+        self._eigenvalues = eigenvalues / (1 - eigenvalues)
+        self._projection = w.T @ diag.dia_basis
+        self._projected_a = self._projection @ self._a
+        self._projected_b = self._projection @ self._b
 
+    @property
+    def projection(self: Self) -> ndarray:
+        """Get the signal projection matrix
 
-def to_csp(file: Path) -> None:
-    """Perform Common Spatial Pattern algorithm on the dataset.
+        Returns:
+            ndarray: Signal projection.
+        """
+        return self._projection
 
-    Args:
-        file (Path): data file.
-    """
-    raw = mne.io.read_raw_edf(file)
-    eegbci.standardize(raw)
-    raw.set_montage("standard_1005")
-    events, event_ids = mne.events_from_annotations(raw)
-    epochs = mne.Epochs(
-        raw, events, event_id={"T1": event_ids["T1"], "T2": event_ids["T2"]},
-        preload=True, picks="eeg"
-    )
-    X = epochs.get_data(copy=True)
-    y = epochs.events
-    print(X.shape)
-    print(y.shape)
+    @property
+    def eigenvalues(self: Self) -> ndarray:
+        """Get eigenvalues associated to each column of the projection matrix.
 
+        Returns:
+            ndarray: Eigenvalues.
+        """
+        return self._eigenvalues
 
-def get_args(description: str = '') -> Namespace:
-    """Manages program arguments.
+    @property
+    def projected_a(self: Self) -> ndarray:
+        """Get filtered a signal.
 
-    Args:
-        description (str): is the program helper description.
-    Returns:
-        Namespace: The arguments.
-    """
-    av = arg.ArgumentParser(description=description)
-    av.add_argument("file", type=str, help="data file")
-    av.add_argument("--debug", action="store_true", help="Traceback mode.")
-    return av.parse_args()
+        Returns:
+            ndarray: projected a signal.
+        """
+        return self._projected_a
 
+    @property
+    def projected_b(self: Self) -> ndarray:
+        """Get filtered b signal.
 
-def main() -> int:
-    """Test main.
-
-    Returns:
-        int: return status 0 (success) 1 (error).
-    """
-    try:
-        av = get_args(main.__doc__)
-        fmt = "%(asctime)s | %(levelname)s - %(message)s"
-        if av.debug:
-            logging.basicConfig(level=logging.DEBUG, format=fmt)
-        else:
-            logging.basicConfig(level=logging.INFO, format=fmt)
-        csp(av.file)
-        return 0
-    except Exception as err:
-        debug = "av" in locals() and hasattr(av, "debug") and av.debug
-        logging.critical("Fatal error: %s", err, exc_info=debug)
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        Returns:
+            ndarray: projected a signal.
+        """
+        return self._projected_b

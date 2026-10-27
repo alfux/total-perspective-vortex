@@ -1,4 +1,7 @@
-"""Diagonalized object file. Further optimizations can be implemented later."""
+"""Diagonalize module for symetric matrices.
+
+Further optimizations can be implemented later.
+"""
 
 import sys
 from typing import Self
@@ -8,8 +11,8 @@ from numpy import ndarray
 from numpy import random as rng
 
 
-class Diagonalized:
-    """Diagonalized class for symetric matrices."""
+class Diagonalize:
+    """Diagonalize class for symetric matrices."""
 
     _EPSILON = 1e-12
     _MAX_ITERATIONS = int(1e6)
@@ -143,7 +146,7 @@ class Diagonalized:
         basis = np.array([[]] * self._dim)
         norm = 1
         pre_norm = 1
-        while norm > Diagonalized._EPSILON * pre_norm:
+        while norm > Diagonalize._EPSILON * pre_norm:
             basis = np.concat([basis, q / norm], axis=1)
             q = self._m @ basis[:, -1][:, None]
             pre_norm = np.linalg.norm(q)

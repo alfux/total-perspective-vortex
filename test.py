@@ -5,7 +5,7 @@ from argparse import Namespace
 
 import numpy as np
 
-from tpv.diagonalized import Diagonalized
+from tpv.diagonalize import Diagonalize
 
 
 def get_args(description: str = '') -> Namespace:
@@ -42,7 +42,7 @@ def main() -> int:
             [1, 1, 1, 1, 1]
         ])
         sym = (sym + sym.T) / 2
-        m = Diagonalized(sym)
+        m = Diagonalize(sym)
         print(
             m.raw,
             np.round(m.tri_basis @ m.tri @ m.tri_basis.T),
