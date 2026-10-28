@@ -97,7 +97,7 @@ class Diagonalize:
         return True
 
     def _qr_algorithm(self: Self, a: ndarray) -> tuple[ndarray, ndarray]:
-        """QR algorithm for matrix diagonalisation.
+        """QR algorithm for matrix diagonalization.
 
         Args:
             a (ndarray): a matrix.
