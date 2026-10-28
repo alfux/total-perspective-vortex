@@ -5,6 +5,7 @@ from argparse import Namespace
 
 import numpy as np
 
+from tpv.csp import CSP
 from tpv.diagonalize import Diagonalize
 
 
@@ -34,21 +35,14 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        sym = np.array([
-            [1, 2, 3, 1, 1],
-            [2, 7, 0, 0, 1],
-            [3, 0, 3, 9, 1],
-            [3, 0, 9, 9, 1],
-            [1, 1, 1, 1, 1]
-        ])
+        data1 = np.random.random((10, 5, 100))
+        data2 = np.random.random((10, 5, 100))
+        csp = CSP(data1, data2)
+        csp.assert_csp()
+        sym = np.random.random((10, 10))
         sym = (sym + sym.T) / 2
-        m = Diagonalize(sym)
-        print(
-            m.raw,
-            np.round(m.tri_basis @ m.tri @ m.tri_basis.T),
-            np.round(m.dia_basis @ m.dia @ m.dia_basis.T),
-            sep="\n\n"
-        )
+        dia = Diagonalize(sym)
+        dia.assert_dia()
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug

@@ -24,9 +24,9 @@ class Diagonalize:
             matrix (ndarray): symetric matrix.
         """
         if len(matrix.shape) != 2 or matrix.shape[0] < 2:
-            raise RuntimeError("Not a matrix")
-        if not np.array_equal(matrix.T, matrix):
-            raise RuntimeError("Not symetric")
+            raise RuntimeError(f"Not a matrix:\n\n{matrix}")
+        if not np.allclose(matrix.T, matrix):
+            raise RuntimeError(f"Not symetric:\n\n{matrix}")
         self._m = matrix.copy()
         self._dim = len(self._m)
         self._tri_basis = self._lanczos()
@@ -78,6 +78,23 @@ class Diagonalize:
             ndarray: Tridiagonilization orthogonal basis.
         """
         return self._tri_basis
+
+    def assert_dia(self: Self) -> bool:
+        """Test validity of diagonalization.
+
+        Raise an AssertionError if failed.
+        """
+        np.testing.assert_allclose(
+            self.tri_basis.T @ self._m @ self.tri_basis,
+            self._tri,
+            atol=1e-8
+        )
+        np.testing.assert_allclose(
+            self._dia_basis.T @ self._m @ self._dia_basis,
+            self._dia,
+            atol=1e-8
+        )
+        return True
 
     def _qr_algorithm(self: Self, a: ndarray) -> tuple[ndarray, ndarray]:
         """QR algorithm for matrix diagonalisation.
@@ -146,7 +163,7 @@ class Diagonalize:
         basis = np.array([[]] * self._dim)
         norm = 1
         pre_norm = 1
-        while norm > Diagonalize._EPSILON * pre_norm:
+        while basis.shape[1] < self._dim and norm > self._EPSILON * pre_norm:
             basis = np.concat([basis, q / norm], axis=1)
             q = self._m @ basis[:, -1][:, None]
             pre_norm = np.linalg.norm(q)
