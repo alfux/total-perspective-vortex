@@ -12,7 +12,7 @@ class CSP:
     """Common Spatial Pattern class for EEG signals."""
 
     def __init__(self: Self, a: ndarray, b: ndarray, filter_range: int = 2) -> None:
-        """Initialize the object with two signals.
+        """Initialize the object with two signals sets.
 
         Args:
             a (ndarray): First dataset (n_epochs, n_channels, n_times).
