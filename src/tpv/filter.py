@@ -6,6 +6,8 @@ import mne
 from mne.datasets import eegbci
 from mne.io import BaseRaw
 
+from tpv.csp import CSP
+
 
 class Filter:
     """Filtering class used to process eeg signals in the pipeline."""
@@ -21,7 +23,10 @@ class Filter:
                 "T1": event_ids["T1"], "T2": event_ids["T2"]},
             preload=True, picks="eeg"
         )
-        x = epochs.get_data(copy=True)
-        y = epochs.events
+        x = epochs["T1"].get_data(copy=True)
+        y = epochs["T2"].get_data(copy=True)
+        csp = CSP(x, y)
+        x = csp.filter(x)
+        y = csp.filter(y)
         print(x.shape)
         print(y.shape)

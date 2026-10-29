@@ -7,6 +7,7 @@ import numpy as np
 
 from tpv.csp import CSP
 from tpv.diagonalize import Diagonalize
+from tpv.filter import Filter
 
 
 def get_args(description: str = '') -> Namespace:
@@ -18,6 +19,7 @@ def get_args(description: str = '') -> Namespace:
         Namespace: The arguments.
     """
     av = arg.ArgumentParser(description=description)
+    av.add_argument("file", type=str, help="eeg file")
     av.add_argument("--debug", action="store_true", help="Traceback mode.")
     return av.parse_args()
 
@@ -35,14 +37,7 @@ def main() -> int:
             logging.basicConfig(level=logging.DEBUG, format=fmt)
         else:
             logging.basicConfig(level=logging.INFO, format=fmt)
-        data1 = np.random.random((10, 5, 100))
-        data2 = np.random.random((10, 5, 100))
-        csp = CSP(data1, data2)
-        csp.assert_csp()
-        sym = np.random.random((10, 10))
-        sym = (sym + sym.T) / 2
-        dia = Diagonalize(sym)
-        dia.assert_dia()
+        data_filter = Filter(av.file)
         return 0
     except Exception as err:
         debug = "av" in locals() and hasattr(av, "debug") and av.debug
