@@ -11,7 +11,9 @@ from tpv.diagonalize import Diagonalize
 class CSP:
     """Common Spatial Pattern class for EEG signals."""
 
-    def __init__(self: Self, a: ndarray, b: ndarray, filter_range: int = 2) -> None:
+    def __init__(
+            self: Self, a: ndarray, b: ndarray, filter_range: int = 2
+    ) -> None:
         """Initialize the object with two signals sets.
 
         Args:
